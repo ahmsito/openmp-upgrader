@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// Statistics
 let stats = {
     filesProcessed: 0,
     filesModified: 0,
@@ -33,7 +32,15 @@ function convertToOMP(content, functionName, conversions) {
     
     const regex = new RegExp(`${functionName}\\s*\\(([^)]+)\\)`, 'g');
     
-    content = content.replace(regex, (match, params) => {
+    content = content.replace(regex, (match, params, offset) => {
+        const lineStart = content.lastIndexOf('\n', offset) + 1;
+        const lineEnd = content.indexOf('\n', offset);
+        const line = content.substring(lineStart, lineEnd === -1 ? content.length : lineEnd).trim();
+        
+        if (/^(public|native|forward|stock|callback|function:|function)\s+/.test(line)) {
+            return match;
+        }
+        
         const paramArray = splitParameters(params);
         
         conversions.forEach(({ paramIndex, type, mapping }) => {
