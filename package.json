@@ -1,0 +1,15 @@
+{
+  "name": "omp-converter",
+  "version": "1.0.0",
+  "description": "PAWN to OMP syntax converter with win1251 encoding support",
+  "main": "omp-converter.js",
+  "scripts": {
+    "start": "node omp-converter.js"
+  },
+  "keywords": ["pawn", "samp", "omp", "converter"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "iconv-lite": "^0.6.3"
+  }
+}

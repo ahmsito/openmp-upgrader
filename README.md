@@ -60,6 +60,21 @@ The script will:
 
 - Node.js (any recent version)
 
+## Installation
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+## Encoding Support
+
+The script automatically detects and preserves file encoding:
+- UTF-8 files remain UTF-8
+- Windows-1251 (Cyrillic) files remain win1251
+- Shows detected encoding in output
+- This is still in beta.
+
 ## Adding More Functions
 
 To add more conversion rules, edit the `CONVERSION_RULES` array:
