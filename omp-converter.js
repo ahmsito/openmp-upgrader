@@ -2,61 +2,16 @@ const fs = require('fs');
 const path = require('path');
 const iconv = require('iconv-lite');
 const readline = require('readline');
+const { log, printHeader } = require('./cliui/core');
+const AsciiTable = require('./cliui/asciitable');
+const formatting = require('./cliui/formatting');
 
 let foundFiles = [];
 
 /* 
  * ┌──────────────────────────────────────────────────────────────────────────┐
- * │ logging helpers                                                          │
- * │ provides formatted console output                                        │
- * └──────────────────────────────────────────────────────────────────────────┘
- */
-
-const rainbowColors = [
-    '\x1b[38;5;201m',
-    '\x1b[38;5;165m',
-    '\x1b[38;5;129m',
-    '\x1b[38;5;93m',
-    '\x1b[38;5;57m',
-    '\x1b[38;5;21m'
-];
-
-let rainbowIndex = 0;
-
-function getTimestamp() {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    const ms = String(now.getMilliseconds()).padStart(2, '0').substring(0, 2);
-    
-    const color = rainbowColors[rainbowIndex % rainbowColors.length];
-    rainbowIndex++;
-    
-    return `${color}[${hours}:${minutes}:${seconds}.${ms}]\x1b[0m`;
-}
-
-function padToTag(msg) {
-    const totalWidth = 120;
-    const timestampLength = 14;
-    const msgLength = msg.replace(/\x1b\[[0-9;]*m/g, '').length;
-    const availableSpace = totalWidth - timestampLength;
-    const padding = Math.max(0, availableSpace - msgLength - 1);
-    return ' ' + msg + ' '.repeat(padding);
-}
-
-const log = {
-    error: (msg) => console.log(`${getTimestamp()} \x1b[31m${msg}\x1b[0m`),
-    success: (msg) => console.log(`${getTimestamp()} \x1b[32m${msg}\x1b[0m`),
-    info: (msg) => console.log(`${getTimestamp()}${padToTag(msg)}\x1b[36m[ INFO ]\x1b[0m`),
-    warning: (msg) => console.log(`${getTimestamp()} \x1b[33m${msg}\x1b[0m`),
-    dim: (msg) => console.log(`${getTimestamp()} \x1b[2m${msg}\x1b[0m`)
-};
-
-/* 
- * ┌──────────────────────────────────────────────────────────────────────────┐
- * │ statistics                                                               │
- * │ tracks conversion statistics across all processed files                  │
+ * │ STATISTICS                                                               │
+ * │ Tracks conversion statistics across all processed files.                │
  * └──────────────────────────────────────────────────────────────────────────┘
  */
 
@@ -388,44 +343,15 @@ function processFile(filePath) {
  * └──────────────────────────────────────────────────────────────────────────┘
  */
 
-function printHeader() {
-    console.clear();
-    
-    if (process.stdout.isTTY) {
-        process.stdout.write('\x1b[8;30;130t');
-    }
-    
-    const terminalWidth = 130;
-    const lines = [
-        '',                                                           
-        '  m####m   ##m###m    m####m   ##m####m            ####m##m  ##m###m  ',
-        ' ##"  "##  ##"  "##  ##mmmm##  ##"   ##            ## ## ##  ##"  "## ',
-        ' ##    ##  ##    ##  ##""""""  ##    ##            ## ## ##  ##    ## ',
-        ' "##mm##"  ###mm##"  "##mmmm#  ##    ##     ##     ## ## ##  ###mm##" ',
-        '   """"    ## """      """""   ""    ""     ""     "" "" ""  ## """   ',
-        '           ##                                                ##       ',
-        '',
-        'convert legacy pawn syntax to open.mp modern syntax',
-        'this tool is still in very (alpha) and any pull request is welcome',
-        ''
-    ];
-    
-    lines.forEach(line => {
-        const padding = Math.max(0, Math.floor((terminalWidth - line.length) / 2));
-        console.log(' '.repeat(padding) + line);
-    });
-    console.log('');
-}
-
 function printSummary() {
-    console.log('\n' + '═'.repeat(50));
-    console.log('\n  CONVERSION SUMMARY\n');
-    console.log(`   files processed: ${stats.filesProcessed}`);
-    console.log(`   files modified:  ${stats.filesModified}`);
-    log.info(`   total changes:   ${stats.totalReplacements}\n`);
+    console.log('\n' + formatting.createDivider());
+    console.log('\n📊 CONVERSION SUMMARY\n');
+    console.log(`   Files processed: ${stats.filesProcessed}`);
+    console.log(`   Files modified:  ${stats.filesModified}`);
+    console.log(`   Total changes:   ${stats.totalReplacements}\n`);
     
     if (Object.keys(stats.replacementsByType).length > 0) {
-        console.log('   changes by function:');
+        console.log('   Changes by function:');
         Object.entries(stats.replacementsByType)
             .filter(([, count]) => count > 0)
             .sort((a, b) => b[1] - a[1])
@@ -434,12 +360,12 @@ function printSummary() {
             });
     }
     
-    console.log('\n' + '═'.repeat(50));
+    console.log('\n' + formatting.createDivider());
     
     if (stats.filesModified > 0) {
-        log.success('conversion completed! Backup files (.bak) created.');
+        log.success('Conversion completed! Backup files (.bak) created.');
     } else {
-        log.info('no files needed conversion.');
+        log.info('No files needed conversion.');
     }
     console.log('');
 }
@@ -478,10 +404,11 @@ function printMenu() {
     const padding = Math.max(0, Math.floor((terminalWidth - boxWidth) / 2));
     const indent = ' '.repeat(padding);
     
-    const menuContent = ' \x1b[36m1\x1b[0m - Search for files            \x1b[36m2\x1b[0m - Convert found files            \x1b[36m3\x1b[0m - Exit                    ';
+    const menuContent = '\x1b[36m1\x1b[0m - Search for files            \x1b[36m2\x1b[0m - Convert found files            \x1b[36m3\x1b[0m - Exit';
     const cleanContent = menuContent.replace(/\x1b\[[0-9;]*m/g, '');
     const contentPadding = Math.max(0, Math.floor((boxWidth - 2 - cleanContent.length) / 2));
-    const paddedContent = ' '.repeat(contentPadding) + menuContent + ' '.repeat(boxWidth - 2 - cleanContent.length - contentPadding);
+    const rightPadding = boxWidth - 2 - cleanContent.length - contentPadding;
+    const paddedContent = ' '.repeat(contentPadding) + menuContent + ' '.repeat(rightPadding);
     
     console.log('');
     console.log(indent + '\x1b[2m╔' + '═'.repeat(boxWidth - 2) + '╗\x1b[0m');
@@ -507,12 +434,12 @@ function searchFiles() {
 
 function convertFiles() {
     if (foundFiles.length === 0) {
-        log.error('No files found. Please search for files first (option 1).');
+        log.warning('No files found. Please search for files first (option 1).');
         setTimeout(() => showMenu(), 1500);
         return;
     }
     
-    console.log('\n' + '─'.repeat(120) + '\n');
+    console.log('\n' + formatting.createDivider('CONVERTING') + '\n');
     
     foundFiles.forEach(processFile);
     
@@ -537,7 +464,9 @@ function showMenu() {
         input: process.stdin,
         output: process.stdout
     });
-    
+    // for (let i = 1; i <= 100; i++) {
+    //     log.success(`Starting process sequence...`);
+    // }
     rl.question('Choice: ', (answer) => {
         rl.close();
         
