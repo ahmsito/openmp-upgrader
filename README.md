@@ -1,6 +1,6 @@
 # PAWN to OMP Converter
 
-Automatically converts legacy PAWN/SA-MP syntax to modern open.mp (OMP) syntax in `.pwn` and `.inc` files.
+Automatically converts legacy PAWN syntax to open.mp (OMP) syntax in `.pwn` and `.inc` files.
 
 ## What it does
 
