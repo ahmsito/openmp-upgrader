@@ -11,7 +11,7 @@ let foundFiles = [];
 /* 
  * ┌──────────────────────────────────────────────────────────────────────────┐
  * │ STATISTICS                                                               │
- * │ Tracks conversion statistics across all processed files.                │
+ * │ Tracks conversion statistics across all processed files.                 │
  * └──────────────────────────────────────────────────────────────────────────┘
  */
 
@@ -345,10 +345,10 @@ function processFile(filePath) {
 
 function printSummary() {
     console.log('\n' + formatting.createDivider());
-    console.log('\n📊 CONVERSION SUMMARY\n');
+    console.log('\n  CONVERSION SUMMARY\n');
     console.log(`   Files processed: ${stats.filesProcessed}`);
     console.log(`   Files modified:  ${stats.filesModified}`);
-    console.log(`   Total changes:   ${stats.totalReplacements}\n`);
+    log.info(`   Total changes:   ${stats.totalReplacements}\n`);
     
     if (Object.keys(stats.replacementsByType).length > 0) {
         console.log('   Changes by function:');
@@ -467,6 +467,7 @@ function showMenu() {
     // for (let i = 1; i <= 100; i++) {
     //     log.success(`Starting process sequence...`);
     // }
+    log.info('starting..');
     rl.question('Choice: ', (answer) => {
         rl.close();
         
