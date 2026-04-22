@@ -2,16 +2,45 @@ const fs = require('fs');
 const path = require('path');
 const iconv = require('iconv-lite');
 const readline = require('readline');
-const { log, printHeader } = require('./cliui/core');
-const AsciiTable = require('./cliui/asciitable');
-const formatting = require('./cliui/formatting');
+const { Core, AsciiTable, Formatting } = require('sitolib');
+
+const core = Core.getInstance();
+const formatting = Formatting.getInstance();
+
+const log = {
+    info: (msg) => core.writeLine({ label: { text: 'info' } }, msg),
+    success: (msg) => core.writeLine({ label: { text: 'ok' } }, msg),
+    warning: (msg) => core.writeLine({ label: { text: 'skip' } }, msg),
+    error: (msg) => core.writeLine({ label: { text: 'fail' } }, msg),
+    dim: (msg) => core.writeLine({ label: { show: false } }, msg)
+};
+
+function printHeader() {
+    core.start({
+        logoString: `                                                                  
+                                                                    ██               
+        ▄███▄ ███▄███▄ ████▄   ▄████ ▄███▄ ████▄ ██ ██ ▄█▀█▄ ████▄ ▀██▀▀ ▄█▀█▄ ████▄ 
+        ██ ██ ██ ██ ██ ██ ██   ██    ██ ██ ██ ██ ██▄██ ██▄█▀ ██ ▀▀  ██   ██▄█▀ ██ ▀▀ 
+        ▀███▀ ██ ██ ██ ████▀   ▀████ ▀███▀ ██ ██  ▀█▀  ▀█▄▄▄ ██     ██   ▀█▄▄▄ ██    
+                    ██                                                            
+                    ▀▀                                                            
+        `,
+        version: '1.0.0',
+        author: {
+            name: 'ahmesito',
+            url: 'https://github.com/ahmsito/openmp-upgrader'
+        },
+        silentStart: false,
+        debugMode: true
+    });
+}
 
 let foundFiles = [];
 
 /* 
  * ┌──────────────────────────────────────────────────────────────────────────┐
- * │ STATISTICS                                                               │
- * │ Tracks conversion statistics across all processed files.                 │
+ * │ statistics                                                               │
+ * │ tracks conversion statistics across all processed files                  │
  * └──────────────────────────────────────────────────────────────────────────┘
  */
 
@@ -344,54 +373,36 @@ function processFile(filePath) {
  */
 
 function printSummary() {
-    console.log('\n' + formatting.createDivider());
-    console.log('\n  CONVERSION SUMMARY\n');
-    console.log(`   Files processed: ${stats.filesProcessed}`);
-    console.log(`   Files modified:  ${stats.filesModified}`);
-    log.info(`   Total changes:   ${stats.totalReplacements}\n`);
+    core.writeLine();
+    core.writeLine({ label: { show: false }, time: { show: false }, horizontalRainbow: true, center: true }, formatting.createDivider('CONVERSION SUMMARY'));
+    core.writeLine();
+    core.writeLine({ label: { show: false }, time: { show: false } }, `   Files processed: ${stats.filesProcessed}`);
+    core.writeLine({ label: { show: false }, time: { show: false } }, `   Files modified:  ${stats.filesModified}`);
+    core.writeLine({ label: { text: 'info' } }, `Total changes: ${stats.totalReplacements}`);
+    core.writeLine();
     
     if (Object.keys(stats.replacementsByType).length > 0) {
-        console.log('   Changes by function:');
+        core.writeLine({ label: { show: false }, time: { show: false } }, '   Changes by function:');
         Object.entries(stats.replacementsByType)
             .filter(([, count]) => count > 0)
             .sort((a, b) => b[1] - a[1])
             .forEach(([func, count]) => {
-                console.log(`     • ${func}: ${count}`);
+                core.writeLine({ label: { show: false }, time: { show: false } }, `     • ${func}: ${count}`);
             });
     }
     
-    console.log('\n' + formatting.createDivider());
+    core.writeLine();
+    core.writeLine({ label: { show: false }, time: { show: false }, horizontalRainbow: true, center: true }, formatting.createDivider());
     
     if (stats.filesModified > 0) {
         log.success('Conversion completed! Backup files (.bak) created.');
     } else {
         log.info('No files needed conversion.');
     }
-    console.log('');
+    core.writeLine();
 }
 
 function main() {
-    printHeader();
-    console.log('');
-    
-    const startDir = process.cwd();
-    const files = findPawnFiles(startDir);
-    log.info('Searching for .pwn and .inc files...');
-    
-    if (files.length === 0) {
-        log.warning('No pawn files found in current directory.');
-        return;
-    }
-    
-    log.info(`Found ${files.length} file(s) to process\n`);
-    console.log('─'.repeat(50) + '\n');
-    
-    files.forEach(processFile);
-    printSummary();
-}
-
-function main() {
-    printHeader();
     showMenu();
 }
 
@@ -399,21 +410,32 @@ main();
 
 
 function printMenu() {
-    const terminalWidth = 130;
-    const boxWidth = 118;
-    const padding = Math.max(0, Math.floor((terminalWidth - boxWidth) / 2));
-    const indent = ' '.repeat(padding);
+    const table = new AsciiTable({ showDividers: true });
     
-    const menuContent = '\x1b[36m1\x1b[0m - Search for files            \x1b[36m2\x1b[0m - Convert found files            \x1b[36m3\x1b[0m - Exit';
-    const cleanContent = menuContent.replace(/\x1b\[[0-9;]*m/g, '');
-    const contentPadding = Math.max(0, Math.floor((boxWidth - 2 - cleanContent.length) / 2));
-    const rightPadding = boxWidth - 2 - cleanContent.length - contentPadding;
-    const paddedContent = ' '.repeat(contentPadding) + menuContent + ' '.repeat(rightPadding);
+    table.addColumn('Option');
+    table.addColumn('Description');
+    
+    table.addRow('1', 'Search for .pwn and .inc files');
+    table.addRow('2', 'Convert found files to open.mp');
+    table.addRow('3', 'Exit program');
     
     console.log('');
-    console.log(indent + '\x1b[2m╔' + '═'.repeat(boxWidth - 2) + '╗\x1b[0m');
-    console.log(indent + '\x1b[2m║\x1b[0m' + paddedContent + '\x1b[2m║\x1b[0m');
-    console.log(indent + '\x1b[2m╚' + '═'.repeat(boxWidth - 2) + '╝\x1b[0m');
+    
+    const tableStr = table.toString();
+    const lines = tableStr.split('\n');
+    const termWidth = process.stdout.columns || 80;
+    
+    lines.forEach((line, index) => {
+        const padding = Math.floor((termWidth - line.length) / 2);
+        const spaces = ' '.repeat(Math.max(0, padding));
+        
+        const coloredLine = line.replace(/(\s)([123])(\s)/g, '$1\x1b[36m$2\x1b[0m$3');
+        
+        const finalLine = coloredLine.replace(/[╔╗╚╝║═╦╩╣╠╬]/g, '\x1b[2m$&\x1b[0m');
+        
+        console.log(spaces + finalLine);
+    });
+    
     console.log('');
 }
 
@@ -439,7 +461,9 @@ function convertFiles() {
         return;
     }
     
-    console.log('\n' + formatting.createDivider('CONVERTING') + '\n');
+    core.writeLine();
+    core.writeLine({ label: { show: false }, time: { show: false }, horizontalRainbow: true, center: true }, formatting.createDivider('CONVERTING'));
+    core.writeLine();
     
     foundFiles.forEach(processFile);
     
@@ -449,25 +473,25 @@ function convertFiles() {
 }
 
 function exitProgram() {
-    console.log('\n');
+    core.writeLine();
     log.info('Goodbye!');
-    console.log('\n');
+    core.writeLine();
     process.exit(0);
 }
 
-function showMenu() {
+async function showMenu() {
     console.clear();
     printHeader();
-    printMenu();
     
+    await core.delay(200);
+    
+    printMenu();
+
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
     });
-    // for (let i = 1; i <= 100; i++) {
-    //     log.success(`Starting process sequence...`);
-    // }
-    log.info('starting..');
+    
     rl.question('Choice: ', (answer) => {
         rl.close();
         

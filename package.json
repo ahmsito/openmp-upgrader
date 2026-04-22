@@ -6,10 +6,16 @@
   "scripts": {
     "start": "node omp-converter.js"
   },
-  "keywords": ["pawn", "samp", "omp", "converter"],
+  "keywords": [
+    "pawn",
+    "samp",
+    "omp",
+    "converter"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "iconv-lite": "^0.6.3"
+    "iconv-lite": "^0.6.3",
+    "sitolib": "^1.0.1"
   }
 }
